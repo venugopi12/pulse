@@ -8,8 +8,10 @@ import {
   type AnalyticsEvent,
   type TenantId,
 } from "@pulse/shared";
+import type { IncomingMessage } from "node:http";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createTokenService } from "../src/auth/jwt.js";
+import { isSameOrigin } from "../src/realtime/ws-server.js";
 import {
   TEST_SECRET,
   as,
@@ -154,6 +156,16 @@ describe("WebSocket handshake authentication", () => {
     expect(await rejectedStatus(port, wsProtocols(tokens["viewer@acme.test"]!), "https://evil.example")).toBe(403);
   });
 
+  it("accepts a same-host Origin not in CORS_ORIGIN (web + API on one domain, e.g. a Vercel preview)", async () => {
+    const s = await connectWs(port, tokens["viewer@acme.test"]!, `http://localhost:${port}`);
+    expect(s.ws.readyState).toBe(s.ws.OPEN);
+    s.ws.close();
+  });
+
+  it("still rejects a cross-site Origin even when it shares a port number", async () => {
+    expect(await rejectedStatus(port, wsProtocols(tokens["viewer@acme.test"]!), `http://evil.example:${port}`)).toBe(403);
+  });
+
   it("rejects an unknown path (404)", async () => {
     expect(await rejectedStatus(port, wsProtocols(tokens["viewer@acme.test"]!), undefined, "/not-ws")).toBe(404);
   });
@@ -175,4 +187,21 @@ describe("WebSocket handshake authentication", () => {
     const { code } = await s.closed;
     expect(code).toBe(WsCloseCode.TokenExpired);
   }, 6000);
+});
+
+describe("isSameOrigin", () => {
+  const req = (headers: Record<string, string>) => ({ headers }) as unknown as IncomingMessage;
+
+  it("matches the Host header", () => {
+    expect(isSameOrigin(req({ host: "pulse.vercel.app" }), "https://pulse.vercel.app")).toBe(true);
+  });
+
+  it("matches X-Forwarded-Host set by a proxy (the container sees an internal Host)", () => {
+    expect(isSameOrigin(req({ host: "10.0.0.5:4000", "x-forwarded-host": "pulse-git-x.vercel.app" }), "https://pulse-git-x.vercel.app")).toBe(true);
+  });
+
+  it("rejects a different host, and garbage", () => {
+    expect(isSameOrigin(req({ host: "pulse.vercel.app" }), "https://evil.example")).toBe(false);
+    expect(isSameOrigin(req({ host: "pulse.vercel.app" }), "not a url")).toBe(false);
+  });
 });

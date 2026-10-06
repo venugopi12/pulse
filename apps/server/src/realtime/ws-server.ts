@@ -50,7 +50,9 @@ export function attachRealtime(server: Server, deps: RealtimeDeps) {
     // Defence in depth against cross-site WebSocket hijacking. Browsers always
     // send Origin; non-browser clients may omit it (they still need a token).
     const origin = req.headers.origin;
-    if (origin && !allowedOrigins.includes(origin)) return reject(socket, 403, "Forbidden");
+    if (origin && !allowedOrigins.includes(origin) && !isSameOrigin(req, origin)) {
+      return reject(socket, 403, "Forbidden");
+    }
 
     const token = extractToken(req.headers["sec-websocket-protocol"]);
     if (!token) return reject(socket, 401, "Unauthorized");
@@ -151,6 +153,31 @@ function extractToken(header: string | undefined): string | undefined {
     .map((p) => p.trim())
     .find((p) => p.startsWith(WS_TOKEN_PROTOCOL_PREFIX));
   return protocol?.slice(WS_TOKEN_PROTOCOL_PREFIX.length) || undefined;
+}
+
+/**
+ * True when the page opening the socket was served from the same host the
+ * socket connects to: the web app and the API share one domain (Vite's proxy
+ * locally; one Vercel deployment with services in production). Every Vercel
+ * preview has its own URL, so listing origins in CORS_ORIGIN can't cover
+ * them, but a same-host page is by definition not cross-site.
+ *
+ * Safe because a browser can't forge either side: it sets Origin itself and
+ * can't set Host or X-Forwarded-Host on a WebSocket. A non-browser client
+ * could, but it could just as well omit Origin, and it still needs a token.
+ */
+export function isSameOrigin(req: IncomingMessage, origin: string): boolean {
+  let host: string;
+  try {
+    host = new URL(origin).host;
+  } catch {
+    return false;
+  }
+  const forwarded = req.headers["x-forwarded-host"];
+  const candidates = [req.headers.host, ...(Array.isArray(forwarded) ? forwarded : (forwarded ?? "").split(","))]
+    .map((h) => h?.trim().toLowerCase())
+    .filter(Boolean);
+  return candidates.includes(host.toLowerCase());
 }
 
 function reject(socket: Duplex, status: number, text: string) {

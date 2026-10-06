@@ -256,10 +256,16 @@ so look at the ratios.
 
 ## Deploy
 
-Frontend on **Vercel**, API on **Render** (any host that keeps WebSocket connections open works; Vercel
-functions don't). The repo includes a `Dockerfile`, a `render.yaml` blueprint, `apps/web/vercel.json` and
-a GitHub Actions workflow. Step-by-step instructions, environment variables and a smoke-test checklist are
-in [DEPLOY.md](DEPLOY.md).
+Two options, both configured in the repo:
+
+- **One Vercel project with services** (`vercel.json`): the Vite app at `/`, and the API container at
+  `/api/*` and `/ws` on the same domain. Simplest; the API runs as auto-scaling Vercel Functions, so
+  in-memory state is per instance (fine for a demo).
+- **Vercel for the web app, Render for the API** (`render.yaml`, `Dockerfile`): one long-running server,
+  consistent live data under real traffic.
+
+A GitHub Actions workflow runs the typecheck, tests, build and the end-to-end test on every push.
+Step-by-step instructions, environment variables and a smoke-test checklist are in [DEPLOY.md](DEPLOY.md).
 
 ## Design decisions and trade-offs
 

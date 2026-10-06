@@ -1,0 +1,28 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "pulse-api": {
+      "root": ".",
+      "runtime": "container",
+      "entrypoint": "Dockerfile"
+    },
+    "web": {
+      "root": "apps/web",
+      "framework": "vite",
+      "buildCommand": "npm run build",
+      "outputDirectory": "dist",
+      "rewrites": [{ "source": "/((?!assets/).*)", "destination": "/index.html" }],
+      "headers": [
+        {
+          "source": "/assets/(.*)",
+          "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+        }
+      ]
+    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": { "service": "pulse-api" } },
+    { "source": "/ws", "destination": { "service": "pulse-api" } },
+    { "source": "/(.*)", "destination": { "service": "web" } }
+  ]
+}

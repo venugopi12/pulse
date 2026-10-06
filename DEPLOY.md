@@ -1,11 +1,61 @@
 # Deploying Pulse
 
-Two pieces, two hosts:
+Two ways to deploy, both from this repo:
 
-| Piece | Host | Why |
+| | Option A: one Vercel project (services) | Option B: Vercel + Render |
 | --- | --- | --- |
-| `apps/web` (static React build) | **Vercel** | Static files on a CDN, preview deploys per branch |
-| `apps/server` (Express + WebSocket) | **Render** (or Fly.io / Railway) | Vercel functions can't hold long-lived WebSocket connections; Render web services can |
+| Web app | Vercel, `web` service | Vercel |
+| API + WebSockets | Vercel, `pulse-api` container service | Render (or Fly.io / Railway) |
+| Domains | One: `/api/*` and `/ws` route to the API | Two, cross-origin (`CORS_ORIGIN`) |
+| API process | Auto-scaling Vercel Functions | One long-running server |
+| Best for | Simplest setup, a demo link | Consistent live data under real traffic |
+
+> Before deploying, commit `package-lock.json` (created by your first `npm install`). CI and Docker use
+> `npm ci`, which needs it, so every deploy installs exactly the versions you tested.
+
+## Option A: one Vercel project with services
+
+The root `vercel.json` defines two services and the public routes:
+
+```
+Browser ──▶ pulse.vercel.app
+              ├── /api/*  ──▶ pulse-api  (the root Dockerfile: Express + ws, runs as Vercel Functions)
+              ├── /ws     ──▶ pulse-api  (WebSockets, Vercel Functions beta)
+              └── /*      ──▶ web        (apps/web Vite build, every route serves index.html)
+```
+
+Services receive the original path, so the server's `/api` and `/ws` routes need no changes. The web
+app uses same-origin URLs by default, so don't set `VITE_API_URL`/`VITE_WS_URL`. There are no service
+bindings, because no service calls another server-side: the browser calls the API directly.
+
+1. In Vercel: **Add New > Project**, import the repo, and leave **Root Directory** at the repo root (where
+   `vercel.json` is).
+2. **Environment variables** (Production and Preview):
+
+   | Variable | Value |
+   | --- | --- |
+   | `PORT` | `4000`, **required**: Vercel sends container traffic to `$PORT` (default 80), and the server listens on 4000 as a non-root user |
+   | `JWT_SECRET` | 32+ random characters, e.g. `openssl rand -hex 32` |
+   | `TRUST_PROXY` | `1`, so the login rate limit sees real client IPs |
+   | `ANTHROPIC_API_KEY` | optional, enables Claude for natural-language filters |
+
+   `CORS_ORIGIN` isn't needed: the WebSocket handshake accepts any page served from the same host, which
+   covers every preview URL automatically.
+3. Deploy, then open the URL and run the smoke test below. `/api/health` should return `{"status":"ok",…}`.
+
+**What to know about Vercel Functions** (the API is built for one long-running process):
+- **Each instance has its own in-memory store and simulator.** At demo traffic there's usually one
+  instance, but under load Vercel may start more. A layout saved on one instance then doesn't reach
+  viewers connected to another, and two tabs can show different numbers. Sharing state needs Redis
+  (pub/sub for the hub, a store for dashboards), which is the production fix.
+- **Instances scale to zero** after 5 idle minutes, which resets the seeded data, like Render's free tier.
+- **WebSockets close at the function's max duration** (300 s on Hobby). The client reconnects with
+  backoff and resyncs from a snapshot, so the live indicator blips to "Reconnecting" briefly.
+- The simulator keeps the CPU busy while an instance is up, which counts as Active CPU time.
+
+If any of that matters for your use, use Option B for the API.
+
+## Option B: web on Vercel, API on Render
 
 ```
 Browser ──HTTPS──▶ pulse.vercel.app (static app)
@@ -17,10 +67,7 @@ Browser ──HTTPS──▶ pulse.vercel.app (static app)
 The frontend calls the API cross-origin, so the server's `CORS_ORIGIN` must list the Vercel URL. The
 same list is used for the WebSocket Origin check.
 
-> Before deploying, commit `package-lock.json` (created by your first `npm install`). CI and Docker use
-> `npm ci`, which needs it, so every deploy installs exactly the versions you tested.
-
-## 1. API server on Render
+### 1. API server on Render
 
 1. Push the repo to GitHub.
 2. In Render: **New > Blueprint**, pick the repo. Render reads `render.yaml` and creates the
@@ -35,7 +82,7 @@ Environment variables (all validated at startup; a bad value stops the server wi
 | --- | --- | --- |
 | `JWT_SECRET` | none, **required in production** | 32+ characters. The blueprint generates one. |
 | `JWT_EXPIRES_IN` | `8h` | Sockets are closed when the token expires; the client signs out that tenant. |
-| `CORS_ORIGIN` | `http://localhost:5173` | Comma-separated. Also the WebSocket Origin allowlist. |
+| `CORS_ORIGIN` | `http://localhost:5173` | Comma-separated. Also the WebSocket Origin allowlist (same-host pages are always allowed). |
 | `TRUST_PROXY` | `0` | Set `1` behind Render/Fly/Railway so the login rate limit sees real client IPs. |
 | `SIM_RATE` | `30` | Simulated events/sec per tenant at peak. `0` turns the simulator off. |
 | `WS_FLUSH_MS` | `50` | WebSocket batching window (see the performance section in the README). |
@@ -53,13 +100,15 @@ snapshot. A paid instance stays awake.
 `fly secrets set JWT_SECRET=$(openssl rand -hex 32) CORS_ORIGIN=https://pulse.vercel.app TRUST_PROXY=1`.
 Fly supports WebSockets with no extra config.
 
-## 2. Web app on Vercel
+### 2. Web app on Vercel
 
 1. In Vercel: **Add New > Project**, import the repo.
-2. **Root Directory:** `apps/web`. Vercel detects the npm workspace and installs from the repo root,
-   so `@pulse/shared` resolves. `apps/web/vercel.json` sets the build command, output directory, and
-   the single-page-app rewrite (every route serves `index.html`).
-3. **Environment variables** (Production and Preview):
+2. **Root Directory:** `apps/web`, **Framework:** Vite, **Output Directory:** `dist`. Vercel detects the
+   npm workspace and installs from the repo root, so `@pulse/shared` resolves. (The root `vercel.json`
+   is for Option A and isn't read when the root directory is `apps/web`.)
+3. Add a rewrite so every route serves the app: in **Settings > Routing** (project-level routing rules),
+   rewrite `/((?!assets/).*)` to `/index.html`.
+4. **Environment variables** (Production and Preview):
 
    | Variable | Example |
    | --- | --- |
@@ -67,9 +116,9 @@ Fly supports WebSockets with no extra config.
    | `VITE_WS_URL` | `wss://pulse-api.onrender.com/ws` |
 
    These are read at **build time** (Vite inlines them), so redeploy after changing them.
-4. Deploy, then put the resulting URL in the server's `CORS_ORIGIN` if you hadn't already.
+5. Deploy, then put the resulting URL in the server's `CORS_ORIGIN` if you hadn't already.
 
-## 3. Smoke test after deploying
+## Smoke test after deploying
 
 - [ ] `/api/health` returns `ok`.
 - [ ] Open the Vercel URL, click **Sign in to all three as admin**: dashboard loads, indicator shows **Live**.
@@ -79,7 +128,7 @@ Fly supports WebSockets with no extra config.
 - [ ] Type "errors in the last hour" in the filter bar: chips appear, the widgets show a funnel icon, and the label next to the input says "AI" if a key is set.
 - [ ] Restart the Render service: the indicator goes amber ("Reconnecting in Ns"), then back to Live.
 
-## 4. CI
+## CI
 
 `.github/workflows/ci.yml` runs on every push and pull request: typecheck, unit and integration tests,
 build, then the Playwright end-to-end test against the real server and production web build. The
