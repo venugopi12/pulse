@@ -1,0 +1,26 @@
+# Render Blueprint: New > Blueprint in the Render dashboard, pick this repo.
+# Render's web services support WebSockets on the same port as HTTP.
+services:
+  - type: web
+    name: pulse-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true # Render creates a strong random secret
+      - key: JWT_EXPIRES_IN
+        value: 8h
+      - key: CORS_ORIGIN
+        sync: false # set to your Vercel URL, e.g. https://pulse.vercel.app
+      - key: TRUST_PROXY
+        value: "1" # one hop: Render's load balancer
+      - key: SIM_RATE
+        value: "30"
+      - key: WS_FLUSH_MS
+        value: "50"
+      - key: ANTHROPIC_API_KEY
+        sync: false # optional; set in the Render dashboard. Without it, filters use keyword matching
+      - key: AI_MODEL
+        value: claude-haiku-4-5

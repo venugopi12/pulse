@@ -1,0 +1,398 @@
+@import "tailwindcss";
+@import "@fontsource-variable/plus-jakarta-sans";
+@import "@fontsource-variable/geist-mono";
+
+/* Dark mode is driven by a class on <html>, not the OS media query, so the
+   user's explicit choice wins. (`system` is resolved in JS.) */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------------------------------------------------------------------------
+   1. The tenant accent as a TYPED custom property.
+   An ordinary custom property is just a string, so the browser can't
+   interpolate it — a change snaps instantly. Registering it as <color> lets
+   CSS transition it, and every colour derived from it (glow, focus ring,
+   active nav, badges) morphs along with it in the same frame.
+   ------------------------------------------------------------------------- */
+@property --accent {
+  syntax: "<color>";
+  inherits: true;
+  /* Pulse's own brand colour (indigo), used before any tenant is active,
+     e.g. on the login screen. Tenants override it. */
+  initial-value: #818cf8;
+}
+
+/* ---------------------------------------------------------------------------
+   2. Raw design tokens. Names describe ROLE, not colour, so light/dark is
+   just a different set of values. Every pair used for text was checked for
+   WCAG AA (4.5:1) against the surface it sits on.
+   ------------------------------------------------------------------------- */
+:root {
+  /* Slate palette (UI/UX Pro Max "dark tech" family, with a light twin).
+     Contrast is checked by script for every text/surface pair; the worst
+     case is noted on each line. */
+  --bg: #f5f7fb;
+  --surface-1: #ffffff;
+  --surface-2: #f8fafc;
+  --surface-3: #edf1f7;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --fg: #0f172a; /* ≥15.7:1 */
+  --fg-muted: #475569; /* ≥6.7:1 */
+  --fg-subtle: #56627a; /* ≥5.4:1 */
+  --success: #047857; /* ≥4.8:1 */
+  --danger: #be123c; /* ≥5.5:1 */
+  --warning: #a15c07; /* ≥4.6:1 */
+  --highlight: rgb(255 255 255 / 0.9); /* top inner edge of raised surfaces */
+  /* Raised surfaces: a faint top-to-bottom sheen plus a soft, tinted shadow. */
+  --surface-sheen: linear-gradient(180deg, #ffffff, #fbfcfe);
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 12px 32px -16px rgb(15 23 42 / 0.12);
+  --glass: rgb(255 255 255 / 0.7);
+  --dot: rgb(15 23 42 / 0.09);
+  --edge-light: color-mix(in oklch, var(--accent) 55%, transparent);
+
+  /* Accent derivatives. In light mode the bright tenant accents are too pale
+     for text, so text uses a darker mix of the same hue. */
+  --accent-fg: color-mix(in oklch, var(--accent) 58%, #000);
+  --accent-soft: color-mix(in oklch, var(--accent) 14%, transparent);
+  --accent-glow: color-mix(in oklch, var(--accent) 22%, transparent);
+  --accent-contrast: #0d0f12; /* text on a solid accent fill */
+  /* Chart marks: the accent, darkened in light mode so a teal or amber line
+     still clears 3:1 against a white card (WCAG non-text contrast). */
+  --chart-mark: var(--accent-fg);
+  --chart-grid: var(--border);
+
+  color-scheme: light;
+}
+
+.dark {
+  --bg: #070a12;
+  --surface-1: #0d121d;
+  --surface-2: #121926;
+  --surface-3: #1a2233;
+  --border: #1d2638;
+  --border-strong: #2c3850;
+  --fg: #f1f5f9; /* ≥14.5:1 */
+  --fg-muted: #a7b3c4; /* ≥7.5:1 */
+  --fg-subtle: #8b98ad; /* ≥5.4:1 */
+  --success: #34d399; /* ≥8.3:1 */
+  --danger: #fb7185; /* ≥5.9:1 */
+  --warning: #fbbf24; /* ≥9.5:1 */
+  --highlight: rgb(255 255 255 / 0.06);
+  --surface-sheen: linear-gradient(180deg, #111826, #0c111b);
+  --shadow-card: 0 1px 0 rgb(0 0 0 / 0.4), 0 16px 40px -20px rgb(0 0 0 / 0.7);
+  --glass: rgb(9 13 22 / 0.62);
+  --dot: rgb(148 163 184 / 0.11);
+  --edge-light: color-mix(in oklch, var(--accent) 50%, rgb(255 255 255 / 0.5));
+
+  --accent-fg: color-mix(in oklch, var(--accent) 88%, #fff);
+  --accent-soft: color-mix(in oklch, var(--accent) 16%, transparent);
+  --accent-glow: color-mix(in oklch, var(--accent) 28%, transparent);
+  --chart-mark: var(--accent);
+
+  color-scheme: dark;
+}
+
+/* ---------------------------------------------------------------------------
+   3. Expose tokens to Tailwind: `bg-surface-1`, `text-fg-muted`,
+   `border-border`, `text-accent-fg`, `font-mono`… `inline` makes Tailwind
+   emit var() references, so classes follow theme + tenant at runtime.
+   ------------------------------------------------------------------------- */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+  --color-chart-mark: var(--chart-mark);
+
+  /* UI/UX Pro Max pairing rules: a geometric SaaS sans for the interface
+     ("Friendly SaaS": Plus Jakarta Sans) and a mono for data ("Dashboard
+     Data": code font for numbers, sans for labels). */
+  --font-sans: "Plus Jakarta Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", monospace;
+
+  /* Radius scale by hierarchy: containers > controls > chips. */
+  --radius-card: 16px;
+  --radius-control: 10px;
+  --radius-chip: 6px;
+}
+
+/* 8px spacing grid: Tailwind v4's default spacing unit is 4px, so we stick
+   to even steps (p-2 = 8px, p-4 = 16px, p-6 = 24px…). */
+
+@layer base {
+  html {
+    background: var(--bg);
+    color: var(--fg);
+    /* The ONE place colour animates: the tenant switch. It's a one-off,
+       paint-only transition (no layout), so it is cheap. Live-data
+       animations stay strictly on transform/opacity. */
+    transition: --accent 600ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  body {
+    @apply font-sans antialiased;
+    min-height: 100dvh;
+    font-feature-settings: "ss01", "cv11";
+    letter-spacing: -0.005em;
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 6px var(--accent-glow);
+  }
+  ::selection {
+    background: var(--accent-soft);
+  }
+}
+
+@layer utilities {
+  /* Numbers that update in place must not change width: tabular figures. */
+  .tabular {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums slashed-zero;
+    letter-spacing: -0.01em;
+  }
+
+  /* Raised surface: a faint sheen, a hairline border, a 1px inner highlight
+     on the top edge and a soft shadow tinted to the background. */
+  .surface {
+    background: var(--surface-sheen);
+    border: 1px solid var(--border);
+    box-shadow:
+      inset 0 1px 0 var(--highlight),
+      var(--shadow-card);
+  }
+
+  /* Glass chrome (UI/UX Pro Max: Glassmorphism), for navigation and
+     overlays only; data sits on solid cards, where text contrast is
+     guaranteed.
+
+     backdrop-filter is expensive on a live dashboard: the browser re-blurs
+     the area whenever anything nearby repaints, and live numbers repaint 4×
+     a second. Measured: 56 → 32 fps with a blurred sidebar and top bar
+     (perf/browser-load.ts). So the blur is only used where something can
+     actually move behind the glass:
+       .glass        blurred: overlays, the login card (nothing live nearby)
+       .glass-tint   no blur: the sidebar (only the static backdrop is
+                     ever behind it, so a blur would look identical)
+       .topbar       blurred only while the page is scrolled (data-scrolled) */
+  .glass,
+  .glass-tint,
+  .topbar {
+    background: var(--glass);
+    border-color: var(--border);
+  }
+  .glass,
+  .topbar[data-scrolled="true"] {
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+    backdrop-filter: blur(18px) saturate(150%);
+  }
+  /* Without a blur the top bar needs to be nearly opaque once content
+     scrolls under it; at rest it shows the backdrop like the sidebar. */
+  .topbar[data-scrolled="true"] {
+    background: color-mix(in oklch, var(--bg) 72%, transparent);
+  }
+
+  /* Page backdrop (components/brand/backdrop.tsx). Background layers, top
+     to bottom: accent aurora glows, a fade to the page colour (this is what
+     fades the dots out towards the bottom, instead of a mask), the dot grid,
+     then the page colour. */
+  .backdrop {
+    --aurora: var(--accent-glow);
+    background:
+      radial-gradient(52rem 26rem at 18% -6%, var(--aurora), transparent 70%),
+      radial-gradient(38rem 22rem at 92% 4%, color-mix(in oklch, var(--accent) 10%, transparent), transparent 70%),
+      radial-gradient(ellipse 90% 70% at 50% 0%, transparent 25%, var(--bg) 75%),
+      radial-gradient(var(--dot) 1px, transparent 1.2px) 0 0 / 22px 22px,
+      var(--bg);
+  }
+  .backdrop-strong {
+    --aurora: color-mix(in oklch, var(--accent) 36%, transparent);
+  }
+
+  /* Edge light: a hairline of the tenant colour along a card's top edge,
+     brightest in the middle (a 21st.dev card detail). Static paint, part
+     of the card's own layer, so it costs nothing per frame. */
+  .edge-light::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 14%;
+    right: 14%;
+    height: 1px;
+    pointer-events: none;
+    background: linear-gradient(90deg, transparent, var(--edge-light), transparent);
+  }
+
+  /* Headings: a quiet top-to-bottom ink gradient. */
+  .text-ink {
+    background: linear-gradient(180deg, var(--fg) 30%, color-mix(in oklch, var(--fg) 62%, var(--bg)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   4. Motion primitives (CSS-only ones; component motion uses Motion).
+   ------------------------------------------------------------------------- */
+
+/* Skeleton shimmer: a gradient band moved with TRANSFORM (compositor-only),
+   not background-position (which repaints every frame). */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-3);
+  border-radius: var(--radius-chip);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, var(--fg) 7%, transparent),
+    transparent
+  );
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+@keyframes shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* Live indicator: a ring that expands and fades (transform + opacity). */
+@keyframes breathe {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  70%,
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+.animate-breathe {
+  animation: breathe 2.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+/* Border light (components/fx/glow-border.tsx): a rotation, so it's
+   compositor-only. Reduced motion keeps the light, minus the movement. */
+.glow-border-spin {
+  animation: glow-spin var(--glow-duration, 4s) linear infinite;
+}
+@keyframes glow-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+/* Shiny badge sweep (components/fx/shiny-badge.tsx): transform only, with a
+   long pause between sweeps so it never nags. */
+.shiny-sweep {
+  transform: translateX(-120%);
+  animation: shiny-sweep 4.5s cubic-bezier(0.6, 0, 0.2, 1) infinite;
+}
+@keyframes shiny-sweep {
+  0%,
+  55% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glow-border-spin,
+  .shiny-sweep {
+    animation: none;
+  }
+}
+
+/* View transitions.
+   Page changes (React-driven, see page-transition.tsx): only the named page
+   area does the fade-through. The rest of the frame shows live straight
+   away (new root: no animation), so the nav highlight's own spring isn't
+   frozen inside a snapshot; the old root just fades out quickly. Between
+   pages that's invisible (old and new sidebar are identical); after sign-in
+   it's what fades the login screen away while the logo flies.
+   Tenant switches (typed "tenant", see lib/view-transition.ts): the whole
+   frame fades through (out, then in, so two tenants' numbers never overlap)
+   while the accent colour morphs underneath. */
+html:not(:active-view-transition-type(tenant))::view-transition-old(root) {
+  animation: 100ms both vt-fade-out;
+}
+html:not(:active-view-transition-type(tenant))::view-transition-new(root) {
+  animation: none;
+}
+html:active-view-transition-type(tenant)::view-transition-old(root) {
+  animation: 120ms both vt-fade-out;
+  animation-timing-function: cubic-bezier(0.4, 0, 1, 1) !important;
+}
+html:active-view-transition-type(tenant)::view-transition-new(root) {
+  animation: 240ms 100ms both vt-fade-in;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+/* prefers-reduced-motion: no looping or travelling motion. Motion components
+   are handled globally by <MotionConfig reducedMotion="user">. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    transition: none;
+  }
+  .skeleton::after,
+  .animate-breathe {
+    animation: none;
+  }
+  .skeleton::after {
+    display: none;
+  }
+}
+
+/* Menus scale in from their trigger (transform + opacity only). */
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  @keyframes menu-in {
+    from {
+      opacity: 0;
+    }
+  }
+}

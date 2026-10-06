@@ -1,0 +1,9 @@
+**/node_modules
+**/dist
+**/dist-profile
+.git
+.env
+**/.env
+test-results
+playwright-report
+perf/results

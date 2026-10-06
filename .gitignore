@@ -1,0 +1,12 @@
+node_modules
+dist
+coverage
+.env
+.env.*.local
+*.log
+.DS_Store
+playwright-report
+test-results
+dist-profile
+playwright/.cache
+blob-report

@@ -1,0 +1,26 @@
+[
+  {
+    "Server batch": "1 ms",
+    "Clients": 300,
+    "Frames/s (all clients)": "22,740",
+    "Events delivered/s": "22,740",
+    "Latency p50": "2 ms",
+    "Latency p95": "5 ms",
+    "Latency p99": "8 ms",
+    "Server CPU": "21%",
+    "Server RSS": "147 MB",
+    "Cross-tenant deliveries": 0
+  },
+  {
+    "Server batch": "50 ms",
+    "Clients": 300,
+    "Frames/s (all clients)": "5,980",
+    "Events delivered/s": "22,522",
+    "Latency p50": "27 ms",
+    "Latency p95": "49 ms",
+    "Latency p99": "52 ms",
+    "Server CPU": "8%",
+    "Server RSS": "142 MB",
+    "Cross-tenant deliveries": 0
+  }
+]

@@ -1,0 +1,37 @@
+{
+  "name": "pulse",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "concurrently -n server,web -c blue,magenta \"npm:dev -w @pulse/server\" \"npm:dev -w @pulse/web\"",
+    "dev:server": "npm run dev -w @pulse/server",
+    "dev:web": "npm run dev -w @pulse/web",
+    "seed": "npm run seed -w @pulse/server",
+    "typecheck": "npm run typecheck --workspaces --if-present && tsc -p perf/tsconfig.json && tsc -p e2e/tsconfig.json",
+    "test": "npm run test --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "perf:browser": "tsx perf/browser-load.ts",
+    "perf:ws": "tsx perf/ws-load.ts",
+    "e2e": "playwright test",
+    "test:all": "npm run typecheck && npm test && npm run e2e",
+    "docs:media": "tsx scripts/capture-media.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "concurrently": "^10.0.0",
+    "typescript": "~5.9.3",
+    "vitest": "^5.0.0",
+    "@playwright/test": "^1.56.0",
+    "tsx": "^4.20.0",
+    "ws": "^8.18.0",
+    "@types/ws": "^8.18.1"
+  }
+}

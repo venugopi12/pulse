@@ -1,0 +1,68 @@
+[
+  {
+    "Scenario": "Dashboard: naive (no buffer, no memo)",
+    "React commits/s": 56,
+    "Widget renders/s": 227.7,
+    "Render ms/s": 515.7,
+    "FPS": 7.9,
+    "p95 frame ms": 188.9,
+    "Long tasks ms/s": 166.3,
+    "DOM nodes": 562,
+    "JS heap MB": 63.2
+  },
+  {
+    "Scenario": "Dashboard: + 250ms buffer only",
+    "React commits/s": 10.1,
+    "Widget renders/s": 44.6,
+    "Render ms/s": 71.3,
+    "FPS": 52.1,
+    "p95 frame ms": 33.4,
+    "Long tasks ms/s": 14.5,
+    "DOM nodes": 549,
+    "JS heap MB": 34.7
+  },
+  {
+    "Scenario": "Dashboard: + selectors/memo only",
+    "React commits/s": 84.7,
+    "Widget renders/s": 178.9,
+    "Render ms/s": 106,
+    "FPS": 41.4,
+    "p95 frame ms": 66.7,
+    "Long tasks ms/s": 30.9,
+    "DOM nodes": 551,
+    "JS heap MB": 30.2
+  },
+  {
+    "Scenario": "Dashboard: optimized (both)",
+    "React commits/s": 11,
+    "Widget renders/s": 29.3,
+    "Render ms/s": 27.3,
+    "FPS": 56.1,
+    "p95 frame ms": 33.3,
+    "Long tasks ms/s": 4.2,
+    "DOM nodes": 551,
+    "JS heap MB": 22.3
+  },
+  {
+    "Scenario": "Events 10k: not virtualized",
+    "React commits/s": 1.3,
+    "Widget renders/s": "–",
+    "Render ms/s": 249.5,
+    "FPS": 1.4,
+    "p95 frame ms": 972.2,
+    "Long tasks ms/s": 986.9,
+    "DOM nodes": 82484,
+    "JS heap MB": 104.7
+  },
+  {
+    "Scenario": "Events 10k: virtualized",
+    "React commits/s": 8,
+    "Widget renders/s": "–",
+    "Render ms/s": 3.3,
+    "FPS": 60,
+    "p95 frame ms": 16.7,
+    "Long tasks ms/s": 0,
+    "DOM nodes": 293,
+    "JS heap MB": 11.7
+  }
+]
