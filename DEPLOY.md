@@ -41,7 +41,14 @@ bindings, because no service calls another server-side: the browser calls the AP
 
    `CORS_ORIGIN` isn't needed: the WebSocket handshake accepts any page served from the same host, which
    covers every preview URL automatically.
-3. Deploy, then open the URL and run the smoke test below. `/api/health` should return `{"status":"ok",…}`.
+3. Deploy, then open the URL and run the smoke test below.
+
+   Environment variables apply to **new** deployments only: after adding or changing one, redeploy
+   (push a commit, or **Deployments > … > Redeploy**). Without `JWT_SECRET` the web app loads but every
+   `/api` call returns `500 FUNCTION_INVOCATION_FAILED`, because the server refuses to start.
+
+   Vercel installs dependencies **per service workspace**, not the root's. Each workspace must declare
+   the tools its own scripts run (that's why `apps/web` lists `typescript` for its `tsc` build step). `/api/health` should return `{"status":"ok",…}`.
 
 **What to know about Vercel Functions** (the API is built for one long-running process):
 - **Each instance has its own in-memory store and simulator.** At demo traffic there's usually one
